@@ -31,7 +31,7 @@ async function json(res: Response): Promise<unknown> {
 
 describe("agentmemory integration", () => {
   beforeAll(async () => {
-    const res = await fetch(url("/agentmemory/health")).catch(() => null);
+    const res = await fetch(url("/agentmemory/health"), { headers: authHeaders() }).catch(() => null);
     if (!res || !res.ok) {
       throw new Error(
         `agentmemory is not running at ${BASE_URL}. Start it with: docker compose up -d && npm start`,
@@ -41,7 +41,7 @@ describe("agentmemory integration", () => {
 
   describe("health", () => {
     it("returns ok", async () => {
-      const res = await fetch(url("/agentmemory/health"));
+      const res = await fetch(url("/agentmemory/health"), { headers: authHeaders() });
       expect(res.status).toBe(200);
       const body = (await json(res)) as { status: string; service: string };
       expect(["ok", "healthy"]).toContain(body.status);
@@ -71,7 +71,7 @@ describe("agentmemory integration", () => {
     });
 
     it("lists sessions including the new one", async () => {
-      const res = await fetch(url("/agentmemory/sessions"));
+      const res = await fetch(url("/agentmemory/sessions"), { headers: authHeaders() });
       expect(res.status).toBe(200);
       const body = (await json(res)) as {
         sessions: Array<{ id: string }>;
@@ -93,7 +93,7 @@ describe("agentmemory integration", () => {
     });
 
     it("session is marked completed", async () => {
-      const res = await fetch(url("/agentmemory/sessions"));
+      const res = await fetch(url("/agentmemory/sessions"), { headers: authHeaders() });
       const body = (await json(res)) as {
         sessions: Array<{ id: string; status: string; endedAt?: string }>;
       };
@@ -170,6 +170,7 @@ describe("agentmemory integration", () => {
     it("lists observations for the session", async () => {
       const res = await fetch(
         url(`/agentmemory/observations?sessionId=${OBS_SESSION}`),
+        { headers: authHeaders() },
       );
       expect(res.status).toBe(200);
       const body = (await json(res)) as {
@@ -179,7 +180,7 @@ describe("agentmemory integration", () => {
     });
 
     it("returns 400 without sessionId", async () => {
-      const res = await fetch(url("/agentmemory/observations"));
+      const res = await fetch(url("/agentmemory/observations"), { headers: authHeaders() });
       expect(res.status).toBe(400);
       const body = (await json(res)) as { error: string };
       expect(body.error).toBe("sessionId required");
@@ -265,9 +266,9 @@ describe("agentmemory integration", () => {
   });
 
   describe("auth", () => {
-    it("health endpoint is always public", async () => {
+    it("health endpoint rejects anonymous requests when secret is configured", async () => {
       const res = await fetch(url("/agentmemory/health"));
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(SECRET ? 401 : 200);
     });
 
     if (SECRET) {
@@ -292,9 +293,14 @@ describe("agentmemory integration", () => {
         expect(res.status).toBe(401);
       });
 
-      it("rejects unauthenticated viewer requests on the API port", async () => {
-        const res = await fetch(url("/agentmemory/viewer"));
-        expect(res.status).toBe(401);
+      it("does not return viewer HTML to an unauthenticated API request", async () => {
+        const res = await fetch(url("/agentmemory/viewer"), { redirect: "manual" });
+        expect([401, 302]).toContain(res.status);
+        if (res.status === 302) {
+          const location = res.headers.get("location");
+          expect(location).toBeTruthy();
+          expect(new URL(location!).hostname).toMatch(/^(localhost|127\.0\.0\.1)$/);
+        }
       });
     }
   });

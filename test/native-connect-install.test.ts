@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, unlinkSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { installNativeBundles, prepareNativeBundle } from "../src/cli/connect/native-install.js";
@@ -71,7 +71,7 @@ describe("native installation transaction", () => {
   it.skipIf(process.platform === "win32")("does not follow symbolic links in source or destination bundles", () => {
     symlinkSync(source, target, "dir");
     expect(plan).toThrow("symbolic links");
-    rmSync(target); symlinkSync(config, join(source, "foreign"));
+    unlinkSync(target); symlinkSync(config, join(source, "foreign"));
     expect(plan).toThrow("symbolic links");
   });
 });
