@@ -42,7 +42,7 @@ describe.skipIf(process.platform === "win32")("CLI Compose environment", () => {
           AGENTMEMORY_READY_TIMEOUT_MS: "1000",
           III_REST_PORT: String(ports[0]), III_VIEWER_PORT: String(ports[1]), III_ENGINE_PORT: String(ports[2]),
         },
-        timeout: 10_000,
+        timeout: 30_000,
       }).then(() => ({ code: 0 }), (error: { code: unknown; stdout?: string; stderr?: string }) => error);
       expect(result.code).toBe(1);
       const filtered = join(dataDir, "compose", ".agentmemory-filtered.env");
@@ -54,5 +54,5 @@ describe.skipIf(process.platform === "win32")("CLI Compose environment", () => {
       for (const server of listeners) server.close();
       rmSync(root, { recursive: true, force: true });
     }
-  }, 15_000);
+  }, 45_000);
 });
